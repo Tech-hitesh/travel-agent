@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aria — AI Travel Planner | IBM Granite</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sky:#0ea5e9;--sky-d:#0284c7;--sky-l:#e0f2fe;
+  --navy:#0f172a;--white:#fff;--surface:#f8fafc;
+  --muted:#64748b;--border:#e2e8f0;--danger:#ef4444;
+  --green:#22c55e;--amber:#f59e0b;
+  --agent-bg:#f1f5f9;--user-bg:#0ea5e9;
+  --r:18px;
+}
+html,body{height:100%}
+body{
+  font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 55%,#0c2340 100%);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;
+}
+
+/* ─── APP SHELL ───────────────────────────────────────────── */
+.app{
+  width:100%;max-width:880px;height:94vh;max-height:920px;
+  background:var(--white);border-radius:26px;
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 40px 100px rgba(0,0,0,.55);
+}
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.hdr{
+  background:linear-gradient(90deg,#0f172a,#1e3a5f);
+  padding:14px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.hdr-logo{
+  width:46px;height:46px;border-radius:13px;font-size:22px;flex-shrink:0;
+  background:linear-gradient(135deg,#0ea5e9,#0284c7);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(14,165,233,.4);
+}
+.hdr-info{flex:1}
+.hdr-name{color:#fff;font-size:16px;font-weight:700}
+.hdr-sub{color:#94a3b8;font-size:11px;margin-top:2px}
+.hdr-badges{display:flex;gap:5px;margin-top:4px}
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;
+  background:rgba(14,165,233,.2);color:#7dd3fc;border:1px solid rgba(14,165,233,.3)}
+.badge.ibm{background:rgba(139,92,246,.2);color:#c4b5fd;border-color:rgba(139,92,246,.3)}
+.hdr-status{display:flex;align-items:center;gap:6px;color:#94a3b8;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ─── TABS ───────────────────────────────────────────────── */
+.tabs{
+  display:flex;background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  padding:10px 16px;font-size:13px;font-weight:500;color:var(--muted);
+  cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;
+  transition:color .18s,border-color .18s;user-select:none;
+}
+.tab:hover{color:var(--sky)}
+.tab.active{color:var(--sky);border-bottom-color:var(--sky);background:var(--white)}
+
+/* ─── PANELS ─────────────────────────────────────────────── */
+.panel{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.panel.active{display:flex}
+
+/* ─── CHAT PANEL ─────────────────────────────────────────── */
+.quick-bar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:8px 16px;display:flex;gap:7px;overflow-x:auto;flex-shrink:0;scrollbar-width:none;
+}
+.quick-bar::-webkit-scrollbar{display:none}
+.chip{
+  background:var(--white);border:1px solid var(--border);border-radius:20px;
+  padding:5px 13px;font-size:12.5px;color:#334155;cursor:pointer;
+  white-space:nowrap;transition:all .17s;flex-shrink:0;user-select:none;
+}
+.chip:hover{background:var(--sky);border-color:var(--sky);color:#fff}
+
+.messages{
+  flex:1;overflow-y:auto;padding:20px 18px 14px;
+  display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;
+}
+.messages::-webkit-scrollbar{width:5px}
+.messages::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+
+/* welcome */
+.welcome{
+  background:linear-gradient(135deg,#f0f9ff,#e0f2fe);
+  border:1px solid #bae6fd;border-radius:18px;padding:20px;
+}
+.welcome h2{font-size:17px;color:var(--navy);margin-bottom:6px}
+.welcome p{font-size:13px;color:#475569;line-height:1.6}
+.wgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.wcard{
+  background:#fff;border:1px solid #bae6fd;border-radius:12px;
+  padding:10px 13px;cursor:pointer;transition:all .17s;user-select:none;
+}
+.wcard:hover{border-color:var(--sky);background:var(--sky-l);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,165,233,.18)}
+.wcard:active{transform:scale(.97)}
+.wcard-icon{font-size:20px;margin-bottom:4px;pointer-events:none}
+.wcard-title{font-size:13px;font-weight:600;color:var(--navy);pointer-events:none}
+.wcard-desc{font-size:11.5px;color:var(--muted);margin-top:2px;pointer-events:none}
+
+/* bubbles */
+.msg-row{display:flex;gap:10px;align-items:flex-end;animation:fadeUp .22s ease}
+.msg-row.user{flex-direction:row-reverse}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-av{
+  width:32px;height:32px;border-radius:50%;background:var(--sky);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;margin-bottom:2px;
+}
+.msg-row.user .msg-av{background:#334155}
+.bubble{
+  max-width:74%;padding:11px 14px;border-radius:var(--r);
+  font-size:14px;line-height:1.65;word-break:break-word;
+}
+.msg-row.agent .bubble{background:var(--agent-bg);color:#1e293b;border-bottom-left-radius:5px}
+.msg-row.user  .bubble{background:var(--user-bg);color:#fff;border-bottom-right-radius:5px}
+.bubble-meta{font-size:10px;color:var(--muted);margin-top:4px;padding:0 4px}
+.msg-row.user .bubble-meta{text-align:right}
+
+/* markdown */
+.bubble strong{font-weight:700}
+.bubble em{font-style:italic}
+.bubble h1,.bubble h2,.bubble h3{margin:10px 0 4px;font-weight:700}
+.bubble h1{font-size:15px}.bubble h2{font-size:14.5px}.bubble h3{font-size:14px}
+.bubble ul,.bubble ol{padding-left:18px;margin:6px 0}
+.bubble li{margin:3px 0}
+.bubble p{margin:5px 0}.bubble p:first-child{margin-top:0}.bubble p:last-child{margin-bottom:0}
+.bubble code{background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace}
+.bubble pre{background:rgba(0,0,0,.07);padding:10px;border-radius:8px;overflow-x:auto;margin:8px 0}
+.bubble pre code{background:none;padding:0}
+.bubble hr{border:none;border-top:1px solid var(--border);margin:8px 0}
+.bubble table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px}
+.bubble th,.bubble td{border:1px solid #cbd5e1;padding:6px 10px;text-align:left}
+.bubble th{background:#e2e8f0;font-weight:600}
+
+/* typing */
+.typing-row{display:flex;gap:10px;align-items:flex-end}
+.typing-bubble{background:var(--agent-bg);border-radius:var(--r);border-bottom-left-radius:5px;padding:14px 16px;display:flex;gap:5px}
+.tdot{width:7px;height:7px;border-radius:50%;background:#94a3b8;animation:bounce 1.2s infinite}
+.tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* error banner */
+.err-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;color:var(--danger);font-size:13px;display:flex;gap:8px;align-items:flex-start}
+
+/* input */
+.input-area{border-top:1px solid var(--border);padding:12px 16px;background:#fff;flex-shrink:0}
+.input-row{display:flex;gap:9px;align-items:flex-end}
+.input-wrap{
+  flex:1;background:var(--surface);border:1.5px solid transparent;
+  border-radius:22px;display:flex;align-items:flex-end;padding:8px 14px;transition:border-color .2s;
+}
+.input-wrap:focus-within{border-color:var(--sky);background:#fff}
+#chat-input{
+  flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;
+  resize:none;outline:none;line-height:1.5;max-height:120px;color:#1e293b;
+}
+#chat-input::placeholder{color:#94a3b8}
+.send-btn{
+  width:42px;height:42px;border-radius:50%;border:none;background:var(--sky);color:#fff;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .17s,transform .1s;flex-shrink:0;
+}
+.send-btn:hover{background:var(--sky-d)}.send-btn:active{transform:scale(.92)}
+.send-btn:disabled{background:#cbd5e1;cursor:not-allowed}
+.send-btn svg{width:17px;height:17px}
+.input-hint{font-size:11px;color:#94a3b8;margin-top:6px;text-align:center}
+kbd{font-size:10px;background:var(--surface);padding:1px 5px;border-radius:4px;border:1px solid var(--border)}
+
+/* ─── TRIP BUILDER PANEL ─────────────────────────────────── */
+.scroll-panel{padding:20px;overflow-y:auto;flex:1;min-height:0}
+.scroll-panel h2{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.scroll-panel .psub{font-size:13px;color:var(--muted);margin-bottom:18px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:12.5px;font-weight:600;color:#334155}
+.fg input,.fg select,.fg textarea{
+  border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;
+  font-size:13.5px;font-family:inherit;color:#1e293b;background:var(--surface);outline:none;
+  transition:border-color .2s;
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--sky);background:#fff}
+.fg input.err-field{border-color:var(--danger)}
+.fg textarea{resize:vertical;min-height:70px}
+.fg .err-msg{color:var(--danger);font-size:12px;display:none}
+.fg .err-msg.show{display:block}
+
+.style-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+.schip{
+  padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);
+  font-size:12.5px;cursor:pointer;color:#475569;transition:all .16s;user-select:none;
+}
+.schip.on{background:var(--sky);border-color:var(--sky);color:#fff}
+
+.plan-btn{
+  margin-top:18px;width:100%;padding:13px;
+  background:linear-gradient(90deg,var(--sky),var(--sky-d));
+  color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:opacity .17s;
+}
+.plan-btn:hover:not(:disabled){opacity:.88}
+.plan-btn:disabled{opacity:.55;cursor:not-allowed}
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;
+}
+.plan-btn.loading .spinner{display:block}
+.plan-btn.loading .btn-txt{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── DESTINATIONS PANEL ─────────────────────────────────── */
+.dest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:14px}
+.dcard{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff;transition:all .18s}
+.dcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1);border-color:var(--sky)}
+.dcard-img{height:96px;display:flex;align-items:center;justify-content:center;font-size:42px}
+.dcard-body{padding:11px 13px 0}
+.dcard-name{font-size:14px;font-weight:700;color:var(--navy)}
+.dcard-country{font-size:12px;color:var(--muted);margin-top:2px}
+.dcard-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.dtag{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--sky-l);color:#0369a1}
+.dcard-btn{
+  margin:10px 13px 13px;padding:7px 12px;background:var(--sky);
+  color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;
+  cursor:pointer;width:calc(100% - 26px);transition:background .17s;
+}
+.dcard-btn:hover{background:var(--sky-d)}
+
+/* ─── BUDGET PANEL ───────────────────────────────────────── */
+.b-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+.b-result{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;min-height:60px}
+.b-result h3{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.b-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.b-row.total{border-bottom:none;font-weight:700;font-size:14px;padding-top:12px}
+.b-label{color:#334155}
+.b-val{color:var(--navy);font-weight:600}
+.b-bar{height:5px;border-radius:99px;background:var(--sky-l);margin-top:3px;overflow:hidden}
+.b-fill{height:100%;border-radius:99px;background:var(--sky);transition:width .4s ease}
+.b-note{font-size:11.5px;color:var(--muted);margin-top:10px}
+.ask-btn{
+  margin-top:14px;width:100%;padding:11px;background:var(--sky);color:#fff;
+  border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:background .17s;
+}
+.ask-btn:hover{background:var(--sky-d)}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+@media(max-width:600px){
+  body{padding:0}
+  .app{border-radius:0;height:100vh;max-height:none}
+  .bubble{max-width:88%}
+  .form-grid{grid-template-columns:1fr}
+  .b-controls{grid-template-columns:1fr}
+  .wgrid{grid-template-columns:1fr}
+  .dest-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-logo">✈️</div>
+  <div class="hdr-info">
+    <div class="hdr-name">Aria — AI Travel Planner</div>
+    <div class="hdr-sub">Powered by IBM Granite on watsonx.ai</div>
+    <div class="hdr-badges">
+      <span class="badge">IBM Granite</span>
+      <span class="badge ibm">watsonx.ai</span>
+      <span class="badge">Travel AI</span>
+    </div>
+  </div>
+  <div class="hdr-status">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-label">Online</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tab-bar">
+  <div class="tab active" data-tab="chat">💬 Chat Planner</div>
+  <div class="tab" data-tab="builder">📋 Trip Builder</div>
+  <div class="tab" data-tab="destinations">🗺️ Destinations</div>
+  <div class="tab" data-tab="budget">💰 Budget Estimator</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL 1 — CHAT
+══════════════════════════════════════════ -->
+<div class="panel active" id="tab-chat">
+  <div class="quick-bar" id="quick-bar">
+    <div class="chip" data-msg="Plan a 7-day trip to Japan for 2 people with a mid-range budget.">🇯🇵 Japan 7 Days</div>
+    <div class="chip" data-msg="What are the best beach destinations in Southeast Asia in December?">🏖️ SE Asia Beaches</div>
+    <div class="chip" data-msg="Plan a romantic 5-day Paris trip with budget breakdown.">🗼 Paris Romance</div>
+    <div class="chip" data-msg="I want to go on a wildlife safari in Africa. Best countries, time and cost?">🦁 Africa Safari</div>
+    <div class="chip" data-msg="Best places in India for 2 weeks. Mix of culture, food and nature.">🇮🇳 India 2 Weeks</div>
+    <div class="chip" data-msg="Plan a budget backpacking trip through Europe for 3 weeks under $2000.">🎒 Europe Budget</div>
+    <div class="chip" data-msg="What visa do I need to visit the USA as an Indian citizen?">📄 USA Visa</div>
+    <div class="chip" data-msg="What should I pack for a 10-day trip to Thailand in July?">🧳 Packing List</div>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="welcome" id="welcome-block">
+      <h2>✈️ Hello! I'm Aria, your AI Travel Planner</h2>
+      <p>Powered by <strong>IBM Granite</strong> on watsonx.ai. Ask me anything — destinations, itineraries, budgets, visas, packing lists and more.</p>
+      <div class="wgrid">
+        <div class="wcard" id="wc-1">
+          <div class="wcard-icon">🗺️</div>
+          <div class="wcard-title">Plan My Trip</div>
+          <div class="wcard-desc">Build a personalized itinerary</div>
+        </div>
+        <div class="wcard" id="wc-2">
+          <div class="wcard-icon">🌍</div>
+          <div class="wcard-title">Discover Destinations</div>
+          <div class="wcard-desc">Get destination recommendations</div>
+        </div>
+        <div class="wcard" id="wc-3">
+          <div class="wcard-icon">💰</div>
+          <div class="wcard-title">Budget Planning</div>
+          <div class="wcard-desc">Cost breakdown for your trip</div>
+        </div>
+        <div class="wcard" id="wc-4">
+          <div class="wcard-icon">📄</div>
+          <div class="wcard-title">Visa & Documents</div>
+          <div class="wcard-desc">Entry requirements guide</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <div class="input-wrap">
+        <textarea id="chat-input" rows="1" placeholder="Ask me anything about travel…" maxlength="3000"></textarea>
+      </div>
+      <button class="send-btn" id="send-btn" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-hint"><kbd>Enter</kbd> to send &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> for new line</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL 2 — TRIP BUILDER
+══════════════════════════════════════════ -->
+<div class="panel" id="tab-builder">
+  <div class="scroll-panel">
+    <h2>📋 Trip Builder</h2>
+    <p class="psub">Fill in your preferences and Aria will generate a complete personalized travel plan.</p>
+    <div class="form-grid">
+      <div class="fg">
+        <label>🌍 Destination *</label>
+        <input type="text" id="b-dest" placeholder="e.g. Tokyo, Bali, Paris…"/>
+        <span class="err-msg" id="b-dest-err">Please enter a destination.</span>
+      </div>
+      <div class="fg">
+        <label>📅 Duration</label>
+        <select id="b-days">
+          <option value="3 days">3 days</option>
+          <option value="5 days">5 days</option>
+          <option value="7 days" selected>7 days</option>
+          <option value="10 days">10 days</option>
+          <option value="14 days">2 weeks</option>
+          <option value="21 days">3 weeks</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>👥 Travelers</label>
+        <select id="b-travelers">
+          <option value="solo traveler">Solo</option>
+          <option value="couple (2 people)" selected>Couple (2)</option>
+          <option value="small family (2 adults + 2 kids)">Family</option>
+          <option value="group of friends (4-6 people)">Group</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>💰 Budget</label>
+        <select id="b-budget">
+          <option value="budget (under $50/day per person)">Budget (&lt;$50/day)</option>
+          <option value="mid-range ($50-$150/day per person)" selected>Mid-range</option>
+          <option value="luxury ($150+/day per person)">Luxury ($150+)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>📅 Travel Month</label>
+        <select id="b-month">
+          <option>January</option><option>February</option><option>March</option>
+          <option>April</option><option>May</option><option>June</option>
+          <option>July</option><option>August</option><option>September</option>
+          <option>October</option><option>November</option><option>December</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>🛫 Flying From</label>
+        <input type="text" id="b-from" placeholder="e.g. New York, Mumbai…"/>
+      </div>
+      <div class="fg full">
+        <label>🎯 Travel Style <span style="font-weight:400;color:var(--muted)">(tap to select)</span></label>
+        <div class="style-chips" id="style-chips">
+          <div class="schip" data-v="Culture &amp; History">🏛️ Culture</div>
+          <div class="schip" data-v="Food &amp; Cuisine">🍜 Food</div>
+          <div class="schip" data-v="Adventure &amp; Outdoors">🧗 Adventure</div>
+          <div class="schip" data-v="Beach &amp; Relaxation">🏖️ Beach</div>
+          <div class="schip" data-v="Nature &amp; Wildlife">🌿 Nature</div>
+          <div class="schip" data-v="Shopping &amp; Nightlife">🛍️ Shopping</div>
+          <div class="schip" data-v="Photography">📷 Photography</div>
+          <div class="schip" data-v="Spiritual &amp; Wellness">🧘 Wellness</div>
+        </div>
+      </div>
+      <div class="fg full">
+        <label>📝 Special Requirements <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <textarea id="b-notes" placeholder="e.g. vegetarian food, honeymoon, wheelchair accessible…"></textarea>
+      </div>
+    </div>
+    <button class="plan-btn" id="gen-btn">
+      <div class="spinner" id="gen-spinner"></div>
+      <span class="btn-txt">✨ Generate My Travel Plan</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL 3 — DESTINATIONS
+══════════════════════════════════════════ -->
+<div class="panel" id="tab-destinations">
+  <div class="scroll-panel">
+    <h2>🌍 Popular Destinations</h2>
+    <p class="psub">Click any destination to get a full AI travel guide from Aria.</p>
+    <div class="dest-grid" id="dest-grid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL 4 — BUDGET ESTIMATOR
+══════════════════════════════════════════ -->
+<div class="panel" id="tab-budget">
+  <div class="scroll-panel">
+    <h2>💰 Budget Estimator</h2>
+    <p class="psub">Instant cost estimate — then ask Aria for a full AI breakdown.</p>
+    <div class="b-controls">
+      <div class="fg">
+        <label>🌍 Destination</label>
+        <select id="be-dest">
+          <option value="Japan">Japan</option>
+          <option value="Bali">Bali, Indonesia</option>
+          <option value="Paris">Paris, France</option>
+          <option value="Thailand">Thailand</option>
+          <option value="New York">New York, USA</option>
+          <option value="London">London, UK</option>
+          <option value="Australia">Australia</option>
+          <option value="Dubai">Dubai, UAE</option>
+          <option value="India">India</option>
+          <option value="Spain">Spain</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>📅 Days</label>
+        <select id="be-days">
+          <option value="3">3</option>
+          <option value="5">5</option>
+          <option value="7" selected>7</option>
+          <option value="10">10</option>
+          <option value="14">14</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>💰 Level</label>
+        <select id="be-level">
+          <option value="budget">Budget</option>
+          <option value="mid" selected>Mid-range</option>
+          <option value="luxury">Luxury</option>
+        </select>
+      </div>
+    </div>
+    <div class="b-result" id="b-result"></div>
+    <button class="ask-btn" id="budget-ask-btn">💬 Ask Aria for Detailed AI Breakdown</button>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║  STATE & CONSTANTS                                       ║
+// ╚══════════════════════════════════════════════════════════╝
+var chatHistory = [];
+var isBusy      = false;
+
+var DESTINATIONS = [
+  {name:"Tokyo",       country:"Japan",       emoji:"🗼", tags:["Culture","Food","Tech","Safe"],                bg:"#fef9c3"},
+  {name:"Bali",        country:"Indonesia",   emoji:"🌺", tags:["Beach","Nature","Spiritual","Budget"],          bg:"#dcfce7"},
+  {name:"Paris",       country:"France",      emoji:"🗽", tags:["Romance","Art","Food","Fashion"],              bg:"#fce7f3"},
+  {name:"New York",    country:"USA",         emoji:"🗽", tags:["City","Shopping","Museums","Nightlife"],        bg:"#e0f2fe"},
+  {name:"Safari Kenya",country:"Kenya",       emoji:"🦁", tags:["Wildlife","Adventure","Nature","Unique"],       bg:"#fef3c7"},
+  {name:"Santorini",   country:"Greece",      emoji:"🏛️", tags:["Beach","Romance","Views","Luxury"],            bg:"#ede9fe"},
+  {name:"Bangkok",     country:"Thailand",    emoji:"🛕", tags:["Food","Culture","Budget","Nightlife"],          bg:"#fce7f3"},
+  {name:"Sydney",      country:"Australia",   emoji:"🦘", tags:["Beach","Nature","City","English"],              bg:"#cffafe"},
+  {name:"Rajasthan",   country:"India",       emoji:"🏰", tags:["Culture","History","Food","Colorful"],          bg:"#fef3c7"},
+  {name:"Machu Picchu",country:"Peru",        emoji:"🏔️", tags:["Adventure","History","Hiking","Wonder"],       bg:"#d1fae5"},
+  {name:"Dubai",       country:"UAE",         emoji:"🏙️", tags:["Luxury","Shopping","Modern","Desert"],         bg:"#e0f2fe"},
+  {name:"Amsterdam",   country:"Netherlands", emoji:"🚲", tags:["Culture","Cycling","Canals","Art"],             bg:"#fef9c3"},
+];
+
+var BASE = {
+  budget: {acc:25,  food:15, trans:10, act:10,  misc:5},
+  mid:    {acc:80,  food:40, trans:25, act:30,  misc:15},
+  luxury: {acc:250, food:120,trans:80, act:100, misc:50},
+};
+var MULT = {
+  Japan:1.3, Bali:0.7, Paris:1.5, Thailand:0.65,
+  "New York":1.8, London:1.7, Australia:1.4,
+  Dubai:1.6, India:0.55, Spain:1.1,
+};
+var LVL = {budget:"Budget", mid:"Mid-range", luxury:"Luxury"};
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  DOM REFS                                                ║
+// ╚══════════════════════════════════════════════════════════╝
+var messagesEl  = document.getElementById("messages");
+var chatInput   = document.getElementById("chat-input");
+var sendBtn     = document.getElementById("send-btn");
+var statusDot   = document.getElementById("status-dot");
+var statusLabel = document.getElementById("status-label");
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  TAB SWITCHING                                           ║
+// ╚══════════════════════════════════════════════════════════╝
+document.getElementById("tab-bar").addEventListener("click", function(e) {
+  var tab = e.target.closest(".tab");
+  if (!tab) return;
+  var name = tab.dataset.tab;
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
+  document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
+  tab.classList.add("active");
+  document.getElementById("tab-" + name).classList.add("active");
+});
+
+function switchToChat() {
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
+  document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
+  document.querySelector(".tab[data-tab='chat']").classList.add("active");
+  document.getElementById("tab-chat").classList.add("active");
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  MARKDOWN RENDERER                                       ║
+// ╚══════════════════════════════════════════════════════════╝
+function md(text) {
+  var h = text
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+
+  // code blocks
+  h = h.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_,c){ return "<pre><code>"+c.trim()+"</code></pre>"; });
+  // inline code
+  h = h.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  // bold+italic
+  h = h.replace(/\*\*\*(.+?)\*\*\*/g,"<strong><em>$1</em></strong>");
+  h = h.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  h = h.replace(/__(.+?)__/g,"<strong>$1</strong>");
+  h = h.replace(/\*([^*\n]+)\*/g,"<em>$1</em>");
+  // hr
+  h = h.replace(/^---$/gm,"<hr>");
+  // headers
+  h = h.replace(/^### (.+)$/gm,"<h3>$1</h3>");
+  h = h.replace(/^## (.+)$/gm,"<h2>$1</h2>");
+  h = h.replace(/^# (.+)$/gm,"<h1>$1</h1>");
+  // tables
+  h = h.replace(/((?:^\|.+\|\n?)+)/gm, function(block){
+    var rows = block.trim().split("\n").filter(function(r){ return !r.match(/^\|[-| ]+\|$/); });
+    if (!rows.length) return block;
+    var out = "<table>";
+    rows.forEach(function(row, i){
+      var cells = row.split("|").filter(function(_,idx,a){ return idx>0 && idx<a.length-1; });
+      var tag = i===0 ? "th" : "td";
+      out += "<tr>" + cells.map(function(c){ return "<"+tag+">"+c.trim()+"</"+tag+">"; }).join("") + "</tr>";
+    });
+    return out + "</table>";
+  });
+  // lists
+  h = h.replace(/((?:^[-*] .+\n?)+)/gm, function(block){
+    var items = block.trim().split("\n").map(function(l){ return "<li>"+l.replace(/^[-*] /,"").trim()+"</li>"; }).join("");
+    return "<ul>"+items+"</ul>";
+  });
+  h = h.replace(/((?:^\d+\. .+\n?)+)/gm, function(block){
+    var items = block.trim().split("\n").map(function(l){ return "<li>"+l.replace(/^\d+\. /,"").trim()+"</li>"; }).join("");
+    return "<ol>"+items+"</ol>";
+  });
+  // paragraphs
+  h = h.replace(/\n{2,}/g,"</p><p>");
+  h = h.replace(/\n/g,"<br>");
+  return "<p>"+h+"</p>";
+}
+
+function esc(t){ return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function now(){ return new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); }
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CHAT — APPEND MESSAGE                                   ║
+// ╚══════════════════════════════════════════════════════════╝
+function appendMsg(role, content) {
+  var row = document.createElement("div");
+  row.className = "msg-row " + role;
+
+  var av = document.createElement("div");
+  av.className = "msg-av";
+  av.textContent = role === "agent" ? "✈️" : "🧑";
+
+  var wrap = document.createElement("div");
+
+  var bub = document.createElement("div");
+  bub.className = "bubble";
+  bub.innerHTML = role === "agent"
+    ? md(content)
+    : esc(content).replace(/\n/g,"<br>");
+
+  var meta = document.createElement("div");
+  meta.className = "bubble-meta";
+  meta.textContent = (role === "agent" ? "Aria · " : "You · ") + now();
+
+  wrap.appendChild(bub);
+  wrap.appendChild(meta);
+  row.appendChild(av);
+  row.appendChild(wrap);
+  messagesEl.appendChild(row);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function appendErr(msg) {
+  var div = document.createElement("div");
+  div.className = "err-banner";
+  div.innerHTML = "<span>⚠️</span><span>" + esc(msg) + "</span>";
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function showTyping() {
+  var row = document.createElement("div");
+  row.id = "typing"; row.className = "typing-row";
+  var av = document.createElement("div");
+  av.className = "msg-av"; av.textContent = "✈️";
+  var bub = document.createElement("div");
+  bub.className = "typing-bubble";
+  bub.innerHTML = '<div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>';
+  row.appendChild(av); row.appendChild(bub);
+  messagesEl.appendChild(row);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+function hideTyping() { var t = document.getElementById("typing"); if(t) t.remove(); }
+
+function setBusy(val) {
+  isBusy = val;
+  sendBtn.disabled = val;
+  chatInput.disabled = val;
+  statusDot.style.background = val ? "#f59e0b" : "#22c55e";
+  statusLabel.textContent    = val ? "Thinking…"  : "Online";
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CORE SEND FUNCTION                                      ║
+// ╚══════════════════════════════════════════════════════════╝
+function sendMessage(text) {
+  if (typeof text !== "string") text = chatInput.value;
+  text = text.trim();
+  if (!text || isBusy) return;
+
+  // Switch to chat tab
+  switchToChat();
+
+  // Clear input
+  chatInput.value = "";
+  chatInput.style.height = "auto";
+
+  // Show user message
+  appendMsg("user", text);
+  chatHistory.push({role:"user", content:text});
+
+  setBusy(true);
+  showTyping();
+
+  fetch("/api/chat", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({messages: chatHistory}),
+  })
+  .then(function(res) {
+    return res.json().then(function(data) {
+      return {ok: res.ok, status: res.status, data: data};
+    });
+  })
+  .then(function(result) {
+    hideTyping();
+    if (!result.ok) {
+      var msg = result.data.error || ("Server error " + result.status);
+      if (result.status === 429) msg = "⏳ IBM Granite is busy right now. Wait 15 seconds and try again.";
+      else if (result.status === 401 || result.status === 403) msg = "🔑 API key error — check WATSONX_API_KEY in .env file.";
+      else if (result.status === 503) msg = "⚙️ Server not configured — set credentials in .env file.";
+      appendErr(msg);
+      chatHistory.pop();
+    } else {
+      appendMsg("agent", result.data.reply);
+      chatHistory.push({role:"assistant", content:result.data.reply});
+    }
+  })
+  .catch(function(err) {
+    hideTyping();
+    appendErr("Network error — make sure the server is running at http://localhost:3000");
+    chatHistory.pop();
+    console.error("Chat fetch error:", err);
+  })
+  .finally(function() {
+    setBusy(false);
+    chatInput.focus();
+  });
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CHAT — EVENT LISTENERS                                  ║
+// ╚══════════════════════════════════════════════════════════╝
+// Textarea auto-grow
+chatInput.addEventListener("input", function() {
+  chatInput.style.height = "auto";
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
+});
+
+// Enter to send
+chatInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(chatInput.value);
+  }
+});
+
+// Send button
+sendBtn.addEventListener("click", function() {
+  sendMessage(chatInput.value);
+});
+
+// Quick chips
+document.getElementById("quick-bar").addEventListener("click", function(e) {
+  var chip = e.target.closest(".chip");
+  if (chip && chip.dataset.msg) sendMessage(chip.dataset.msg);
+});
+
+// Welcome cards — direct listeners on each card
+document.getElementById("wc-1").addEventListener("click", function() {
+  sendMessage("I need help planning a trip. Ask me questions to understand my preferences and build a personalized itinerary.");
+});
+document.getElementById("wc-2").addEventListener("click", function() {
+  sendMessage("Recommend the best travel destinations for me. I enjoy culture, food and nature. My budget is mid-range.");
+});
+document.getElementById("wc-3").addEventListener("click", function() {
+  sendMessage("Help me plan and estimate a travel budget for a 10-day trip to Europe for 2 people.");
+});
+document.getElementById("wc-4").addEventListener("click", function() {
+  sendMessage("What are the visa requirements and travel documents I need to plan an international trip?");
+});
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  TRIP BUILDER                                            ║
+// ╚══════════════════════════════════════════════════════════╝
+// Style chips toggle
+document.getElementById("style-chips").addEventListener("click", function(e) {
+  var chip = e.target.closest(".schip");
+  if (chip) chip.classList.toggle("on");
+});
+
+document.getElementById("gen-btn").addEventListener("click", function() {
+  var destEl  = document.getElementById("b-dest");
+  var destErr = document.getElementById("b-dest-err");
+  var dest    = destEl.value.trim();
+
+  // Validate
+  if (!dest) {
+    destEl.classList.add("err-field");
+    destErr.classList.add("show");
+    destEl.focus();
+    return;
+  }
+  destEl.classList.remove("err-field");
+  destErr.classList.remove("show");
+
+  var days      = document.getElementById("b-days").value;
+  var travelers = document.getElementById("b-travelers").value;
+  var budget    = document.getElementById("b-budget").value;
+  var month     = document.getElementById("b-month").value;
+  var from      = document.getElementById("b-from").value.trim();
+  var notes     = document.getElementById("b-notes").value.trim();
+  var styles    = [];
+  document.querySelectorAll(".schip.on").forEach(function(c){ styles.push(c.dataset.v); });
+
+  // Loading state
+  var btn = document.getElementById("gen-btn");
+  btn.disabled = true;
+  btn.classList.add("loading");
+  setTimeout(function(){ btn.disabled = false; btn.classList.remove("loading"); }, 1000);
+
+  // Build prompt
+  var prompt = "Please create a complete travel plan:\n\n";
+  prompt += "Destination: " + dest + "\n";
+  prompt += "Duration: " + days + "\n";
+  prompt += "Travelers: " + travelers + "\n";
+  prompt += "Budget: " + budget + "\n";
+  prompt += "Travel Month: " + month + "\n";
+  if (from)          prompt += "Flying From: " + from + "\n";
+  if (styles.length) prompt += "Travel Style: " + styles.join(", ") + "\n";
+  if (notes)         prompt += "Special Requirements: " + notes + "\n";
+  prompt += "\nPlease include:\n";
+  prompt += "1. Day-by-day itinerary\n";
+  prompt += "2. Accommodation recommendations with price range\n";
+  prompt += "3. Transport options (international + local)\n";
+  prompt += "4. Full budget breakdown in USD\n";
+  prompt += "5. Packing tips for " + month + "\n";
+  prompt += "6. Top local foods to try\n";
+  prompt += "7. Visa requirements and important travel tips";
+
+  sendMessage(prompt);
+});
+
+// Clear destination error on type
+document.getElementById("b-dest").addEventListener("input", function() {
+  this.classList.remove("err-field");
+  document.getElementById("b-dest-err").classList.remove("show");
+});
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  DESTINATIONS GRID                                       ║
+// ╚══════════════════════════════════════════════════════════╝
+(function() {
+  var grid = document.getElementById("dest-grid");
+  DESTINATIONS.forEach(function(d) {
+    var card = document.createElement("div");
+    card.className = "dcard";
+    card.innerHTML =
+      '<div class="dcard-img" style="background:' + d.bg + '">' + d.emoji + '</div>' +
+      '<div class="dcard-body">' +
+        '<div class="dcard-name">' + d.name + '</div>' +
+        '<div class="dcard-country">' + d.country + '</div>' +
+        '<div class="dcard-tags">' + d.tags.map(function(t){ return '<span class="dtag">'+t+'</span>'; }).join("") + '</div>' +
+      '</div>' +
+      '<button class="dcard-btn">Plan a trip to ' + d.name + ' &rarr;</button>';
+
+    card.querySelector(".dcard-btn").addEventListener("click", function(e) {
+      e.stopPropagation();
+      sendMessage(
+        "I want to plan a trip to " + d.name + ", " + d.country + ". " +
+        "Give me a complete travel guide: best time to visit, top attractions, " +
+        "a 7-day day-by-day itinerary, full budget breakdown, visa requirements, and top local foods."
+      );
+    });
+    grid.appendChild(card);
+  });
+})();
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  BUDGET ESTIMATOR                                        ║
+// ╚══════════════════════════════════════════════════════════╝
+function updateBudget() {
+  var dest  = document.getElementById("be-dest").value;
+  var days  = parseInt(document.getElementById("be-days").value, 10);
+  var level = document.getElementById("be-level").value;
+  var b     = BASE[level];
+  var mx    = MULT[dest] || 1.0;
+
+  var acc   = Math.round(b.acc   * mx);
+  var food  = Math.round(b.food  * mx);
+  var trans = Math.round(b.trans * mx);
+  var act   = Math.round(b.act   * mx);
+  var misc  = Math.round(b.misc  * mx);
+  var total = (acc + food + trans + act + misc) * days;
+  var mx2   = Math.max(acc, food, trans, act, misc);
+
+  function bar(v) {
+    return '<div class="b-bar"><div class="b-fill" style="width:' + Math.round(v/mx2*100) + '%"></div></div>';
+  }
+
+  document.getElementById("b-result").innerHTML =
+    '<h3>💰 ' + dest + ' · ' + days + ' days · ' + LVL[level] + '</h3>' +
+    '<div class="b-row"><span class="b-label">🏨 Accommodation</span><span class="b-val">$' + (acc*days).toLocaleString() + '</span></div>' + bar(acc) +
+    '<div class="b-row"><span class="b-label">🍽️ Food &amp; Dining</span><span class="b-val">$' + (food*days).toLocaleString() + '</span></div>' + bar(food) +
+    '<div class="b-row"><span class="b-label">🚌 Local Transport</span><span class="b-val">$' + (trans*days).toLocaleString() + '</span></div>' + bar(trans) +
+    '<div class="b-row"><span class="b-label">🎡 Activities</span><span class="b-val">$' + (act*days).toLocaleString() + '</span></div>' + bar(act) +
+    '<div class="b-row"><span class="b-label">🛍️ Misc &amp; Shopping</span><span class="b-val">$' + (misc*days).toLocaleString() + '</span></div>' + bar(misc) +
+    '<div class="b-row total"><span class="b-label"><strong>✈️ Total (excl. flights)</strong></span>' +
+      '<span class="b-val" style="color:var(--sky);font-size:17px;font-weight:800">$' + total.toLocaleString() + '</span></div>' +
+    '<p class="b-note">Per person estimate · ~$' + (acc+food+trans+act+misc).toLocaleString() + '/day · Flights not included</p>';
+}
+
+["be-dest","be-days","be-level"].forEach(function(id) {
+  document.getElementById(id).addEventListener("change", updateBudget);
+});
+updateBudget();
+
+document.getElementById("budget-ask-btn").addEventListener("click", function() {
+  var dest  = document.getElementById("be-dest").value;
+  var days  = document.getElementById("be-days").value;
+  var level = LVL[document.getElementById("be-level").value];
+  sendMessage(
+    "Give me a detailed realistic budget breakdown for a " + days + "-day " + level +
+    " trip to " + dest + " for 1 person. Include flight cost estimates, accommodation options with prices, " +
+    "daily food costs, activity costs, local transport, and money-saving tips."
+  );
+});
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  STARTUP — HEALTH CHECK                                  ║
+// ╚══════════════════════════════════════════════════════════╝
+fetch("/api/health")
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.configured || !d.configured.apiKey || !d.configured.projectId) {
+      appendErr("Server not fully configured. Set WATSONX_API_KEY and WATSONX_PROJECT_ID in the .env file, then restart the server.");
+    }
+  })
+  .catch(function(){
+    appendErr("Cannot reach the backend server. Please run start.bat to start the server, then refresh this page.");
+  });
+
+chatInput.focus();
+</script>
+</body>
+</html>
